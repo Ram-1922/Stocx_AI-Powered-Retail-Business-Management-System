@@ -1,0 +1,80 @@
+# ==========================================
+# Python Environment & Bytecode
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ==========================================
+# Virtual Environments (Project Specific)
+# ==========================================
+stocxenv/
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ==========================================
+# Environment Variables & Secrets (CRITICAL)
+# ==========================================
+.env
+.flaskenv
+*.secret
+twilio_credentials/
+
+# ==========================================
+# Stocx Dynamic Uploads & Generated Images
+# ==========================================
+# Ignore all dynamically generated billing receipts and user store logos
+static/uploads/receipts/*
+static/logos/*
+
+# Exceptions: Allow git to track the directories themselves via empty files if used
+!static/uploads/receipts/.gitkeep
+!static/logos/.gitkeep
+
+# ==========================================
+# IDEs and Editors Configuration
+# ==========================================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ==========================================
+# OS Specific Files
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
+
+logos/
+uploads/
+static/icons/
+templates/icons/

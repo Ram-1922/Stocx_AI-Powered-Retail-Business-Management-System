@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stocx - Inventory Management System</title>
+    
+    <link rel="icon" href="/static/icons/verify_3199586.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#ecfdf5', 100: '#d1fae5', 400: '#34d399', 500: '#10b981', 600: '#059669', 900: '#064e3b' },
+                        accent: { 500: '#14b8a6', 600: '#0d9488' }
+                    },
+                    animation: { 'float': 'float 6s ease-in-out infinite' },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-8px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; overflow-x: hidden; transition: background-color 0.3s, color 0.3s; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .glass-card {
+            background: var(--bg-glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            will-change: transform;
+        }
+        
+        :root {
+            --bg-base: #f8fafc;
+            --bg-glass: rgba(255, 255, 255, 0.75);
+            --border-glass: rgba(16, 185, 129, 0.15);
+        }
+        .dark {
+            --bg-base: #020617;
+            --bg-glass: rgba(15, 23, 42, 0.7);
+            --border-glass: rgba(16, 185, 129, 0.1);
+        }
+
+        .radial-bg {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -10;
+            background: radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.08), transparent 40%),
+                        radial-gradient(circle at 85% 30%, rgba(20, 184, 166, 0.08), transparent 40%);
+        }
+
+        @keyframes rainFall {
+            0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.15; }
+            90% { opacity: 0.15; }
+            100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+        }
+        .rain-icon {
+            position: fixed; top: -50px; z-index: -5; animation: rainFall linear forwards;
+            pointer-events: none; user-select: none; filter: grayscale(100%);
+        }
+        
+        .text-gradient-base {
+            background: linear-gradient(to right, #475569, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .dark .text-gradient-base {
+            background: linear-gradient(to right, #f8fafc, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        button, p, a, nav, h1, h2, h3, label, .btn-action, .close-btn {
+            -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
+        }
+        input, textarea, select, td {
+            -webkit-user-select: auto; -moz-user-select: auto; -ms-user-select: auto; user-select: auto;
+        }
+
+        .word-spinner-wrapper {
+            display: inline-block;
+            overflow: hidden;
+            height: 1.25em; 
+            vertical-align: bottom;
+        }
+        .word-spinner {
+            display: flex;
+            flex-direction: column;
+            animation: spinWords 15s cubic-bezier(0.83, 0, 0.17, 1) infinite;
+        }
+        .word-spinner span {
+            height: 1.25em;
+            line-height: 1.25em;
+            display: block;
+            white-space: nowrap;
+            background: linear-gradient(to right, #10b981, #14b8a6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            padding-bottom: 0.1em; 
+        }
+        
+        @keyframes spinWords {
+            0%, 12%      { transform: translateY(0); }
+            16.66%, 28%  { transform: translateY(-1.25em); }
+            33.33%, 45%  { transform: translateY(-2.5em); }
+            50%, 62%     { transform: translateY(-3.75em); }
+            66.66%, 78%  { transform: translateY(-5.0em); }
+            83.33%, 95%  { transform: translateY(-6.25em); }
+            100%         { transform: translateY(-7.5em); }
+        }
+    </style>
+</head>
+<body data-logged-in="{{ 'true' if is_logged_in else 'false' }}" class="bg-[var(--bg-base)] text-slate-800 dark:text-slate-100 antialiased min-h-screen flex flex-col selection:bg-brand-500 selection:text-white">
+
+    <div class="radial-bg"></div>
+    <div id="rain-container"></div>
+
+    <div id="spotlight" class="fixed inset-0 pointer-events-none z-[5] opacity-0 transition-opacity duration-300"></div>
+
+    <nav class="sticky top-0 z-40 w-full glass-card border-b transition-all duration-300 shadow-sm">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex items-center gap-4">
+                    <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-400 to-accent-500 flex items-center justify-center shadow-lg shadow-brand-500/30 text-white text-l"><img class="w-9" src="static/icons/verify_3199586.png"/></div>
+                    <h1 class="text-2xl font-extrabold tracking-tight">Stoc<span class="text-brand-500 m">x</span><span class="text-brand-500">.</span></h1>
+                </div>
+                
+                <div class="flex items-center gap-6">
+                    <button id="themeToggle" class="text-slate-500 dark:text-slate-400 hover:text-brand-500 transition-colors" title="Press 'D' to toggle">
+                        <svg class="w-5 h-5 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                        <svg class="w-5 h-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+                    </button>
+                    
+                    {% if is_logged_in %}
+                        <div onclick="openProfileDrawer()" class="group flex items-center gap-3 py-1.5 px-4 pr-1.5 rounded-full cursor-pointer bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-brand-400 transition-all shadow-sm">
+                            <span id="navShopName" class="font-medium text-sm group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{{ shop_name }}</span>
+                            <img id="navLogo" src="" onerror="this.src='https://ui-avatars.com/api/?name={{ shop_name }}&background=0ea5e9&color=fff'" class="w-8 h-8 rounded-full object-cover shadow-sm">
+                        </div>
+                    {% else %}
+                        <button onclick="openAuthModal()" class="bg-gradient-to-r from-brand-500 to-accent-500 text-white text-sm font-semibold py-2.5 px-6 rounded-full hover:shadow-lg hover:shadow-brand-500/30 transition-all hover:-translate-y-0.5">Sign In</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <main class="flex-grow max-w-7xl mx-auto px-6 lg:px-8 py-20 w-full relative z-10">
+        
+        <div class="mb-16 relative">
+            <div class="absolute -left-10 top-0 w-40 h-40 bg-brand-500/20 rounded-full blur-[80px] -z-10"></div>
+            {% if is_logged_in %}
+                <h2 class="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight flex flex-col md:flex-row md:items-center gap-2 md:gap-4 pb-2">
+                    <span class="text-gradient-base">Expert In</span>
+                    <span class="word-spinner-wrapper">
+                        <span class="word-spinner">
+                            <span>Inventory.</span>
+                            <span>POS Billing.</span>
+                            <span>Customer CRM.</span>
+                            <span>Audit Logs.</span>
+                            <span>Ledgers.</span>
+                            <span>Analytics.</span>
+                            <span aria-hidden="true">Inventory.</span> 
+                        </span>
+                    </span>
+                </h2>
+                <p class="text-lg text-slate-600 dark:text-slate-400 max-w-2xl font-medium">Your intelligent management system. Streamline operations, track metrics in real-time, and drive limitless growth.</p>
+            {% else %}
+                <h2 class="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight flex flex-col md:flex-row md:items-center gap-2 md:gap-4 pb-2">
+                    <span class="text-gradient-base">Welcome to</span>
+                    <span class="word-spinner-wrapper">
+                        <span class="word-spinner">
+                            <span>Stocx.</span>
+                            <span>Efficiency.</span>
+                            <span>Control.</span>
+                            <span>Growth.</span>
+                            <span>Innovation.</span>
+                            <span>Clarity.</span>
+                            <span aria-hidden="true">Stocx.</span>
+                        </span>
+                    </span>
+                </h2>
+                <p class="text-lg text-slate-600 dark:text-slate-400 max-w-2xl font-medium">The modern inventory management system. Please <button onclick="openAuthModal()" class="text-brand-500 font-bold hover:underline decoration-2 underline-offset-4">Sign in</button> to access your workspace.</p>
+            {% endif %}
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
+            
+            <a href="{% if is_logged_in %}/inventory{% else %}javascript:openAuthModal(){% endif %}" class="group relative glass-card p-8 rounded-3xl hover:bg-white/90 dark:hover:bg-slate-800/90 transition-all duration-300 animate-float hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(16,185,129,0.25)] flex flex-col items-start h-full" style="animation-delay: 0s;">
+                <div class="w-12 h-12 bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:scale-110 group-hover:bg-brand-500 group-hover:text-white transition-all">📦</div>
+                <h2 class="text-lg font-bold mb-2 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">Inventory Control</h2>
+                <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">AI invoice scanning, precise stock management, and predictive tracking.</p>
+            </a>
+            
+            <a href="{% if is_logged_in %}/billing{% else %}javascript:openAuthModal(){% endif %}" class="group relative glass-card p-8 rounded-3xl hover:bg-white/90 dark:hover:bg-slate-800/90 transition-all duration-300 animate-float hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(16,185,129,0.25)] flex flex-col items-start h-full" style="animation-delay: 0.2s;">
+                <div class="w-12 h-12 bg-accent-500/10 text-accent-600 dark:text-accent-400 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:scale-110 group-hover:bg-accent-500 group-hover:text-white transition-all"><img class="w-8 h-8" src="static/icons/receipt.png"/></div>
+                <h2 class="text-lg font-bold mb-2 group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors">POS Billing</h2>
+                <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Lightning-fast checkout, dynamic cart building, and instant invoices.</p>
+            </a>
+
+            <a href="{% if is_logged_in %}/customers{% else %}javascript:openAuthModal(){% endif %}" class="group relative glass-card p-8 rounded-3xl hover:bg-white/90 dark:hover:bg-slate-800/90 transition-all duration-300 animate-float hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(16,185,129,0.25)] flex flex-col items-start h-full" style="animation-delay: 0.4s;">
+                <div class="w-12 h-12 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:scale-110 group-hover:bg-blue-500 group-hover:text-white transition-all"><img class="w-8 h-8" src="static/icons/customer.png"/></div>
+                <h2 class="text-lg font-bold mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Customer CRM</h2>
+                <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Deep customer insights, purchase history, and lifetime value analytics.</p>
+            </a>
+
+            <a href="{% if is_logged_in %}/history{% else %}javascript:openAuthModal(){% endif %}" class="group relative glass-card p-8 rounded-3xl hover:bg-white/90 dark:hover:bg-slate-800/90 transition-all duration-300 animate-float hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(16,185,129,0.25)] flex flex-col items-start h-full" style="animation-delay: 0.6s;">
+                <div class="w-12 h-12 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-white transition-all">📂</div>
+                <h2 class="text-lg font-bold mb-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">Audit & History</h2>
+                <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Immutable audit logs, uploaded records, and receipt database.</p>
+            </a>
+
+            <a href="{% if is_logged_in %}/credits{% else %}javascript:openAuthModal(){% endif %}" class="group relative glass-card p-8 rounded-3xl hover:bg-white/90 dark:hover:bg-slate-800/90 transition-all duration-300 animate-float hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(16,185,129,0.25)] flex flex-col items-start h-full" style="animation-delay: 0.8s;">
+                <div class="w-12 h-12 bg-rose-500/10 text-rose-600 dark:text-rose-500 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:scale-110 group-hover:bg-rose-500 group-hover:text-white transition-all"><img class="w-8 h-8" src="static/icons/credit-card.png"/></div>
+                <h2 class="text-lg font-bold mb-2 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">Credits & Ledger</h2>
+                <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Manage supplier payables, monitor due dates, and track balance ledgers.</p>
+            </a>
+
+            <a href="{% if is_logged_in %}/expense{% else %}javascript:openAuthModal(){% endif %}" class="group relative glass-card p-8 rounded-3xl hover:bg-white/90 dark:hover:bg-slate-800/90 transition-all duration-300 animate-float hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(16,185,129,0.25)] flex flex-col items-start h-full" style="animation-delay: 1.0s;">
+                <div class="w-12 h-12 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all"><img class="w-8 h-8" src="static/icons/analysis.png"/></div>
+                <h2 class="text-lg font-bold mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Analytics</h2>
+                <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Expense tracking, net profit mapping, and performance metrics.</p>
+            </a>
+            
+        </div>
+
+        <div class="mt-24 text-left border-t border-brand-500/20 pt-8">
+            <p class="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-[0.2em]">Architected by Sri Ram</p>
+        </div>
+    </main>
+
+    <div id="profileOverlay" class="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center p-4 lg:p-8">
+        
+        <div id="profileModal" class="relative w-full max-w-4xl bg-sky-50/85 dark:bg-slate-900/85 backdrop-blur-2xl border border-sky-200/60 dark:border-sky-500/20 shadow-[0_8px_32px_rgba(14,165,233,0.15)] rounded-3xl flex flex-col transform scale-95 opacity-0 transition-all duration-300 ease-out max-h-[90vh] overflow-hidden">
+            
+            <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-sky-400 via-blue-500 to-sky-400"></div>
+
+            <div class="px-8 py-5 flex justify-between items-center border-b border-sky-200/50 dark:border-slate-700/50 bg-white/40 dark:bg-slate-800/40">
+                <h2 class="text-xl font-extrabold tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
+                    <span class="text-sky-500"><img class="w-8 h-8" src="static/icons/user1.png"/></span> Profile
+                </h2>
+                <button onclick="closeProfileDrawer()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-all hover:rotate-90">✕</button>
+            </div>
+
+            <div class="flex flex-col md:flex-row overflow-y-auto no-scrollbar flex-1">
+                
+                <div class="w-full md:w-1/3 p-8 border-r border-sky-200/50 dark:border-slate-700/50 flex flex-col items-center bg-white/20 dark:bg-slate-800/20">
+                    <div class="relative inline-block group mb-6">
+                        <div class="absolute inset-0 bg-sky-400 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
+                        <img id="profileLogoPreview" src="" onerror="this.src='https://ui-avatars.com/api/?name=Shop&background=0ea5e9&color=fff'" class="relative w-40 h-40 rounded-full object-cover border-4 border-white dark:border-slate-800 shadow-xl transition-transform duration-300 group-hover:scale-105">
+                        
+                        <button id="editLogoBtn" onclick="document.getElementById('logoInput').click()" class="hidden absolute bottom-2 right-2 bg-sky-500 text-white rounded-full w-10 h-10 shadow-lg hover:bg-sky-600 flex items-center justify-center transition-all hover:scale-110 active:scale-95 z-10">📷</button>
+                        <input type="file" id="logoInput" accept="image/*" class="hidden" onchange="previewLogo(event)">
+                    </div>
+                    
+                    <h3 id="profileShopNameTitle" class="text-2xl font-bold text-slate-800 dark:text-white text-center">Loading...</h3>
+                    <span id="profileEmailSubtitle" class="text-sm font-medium text-sky-600 dark:text-sky-400 mb-8"></span>
+
+                    <button class="w-full py-2.5 px-4 bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:border-sky-400 transition-colors shadow-sm mb-4">Change Password</button>
+                    <button onclick="logoutUser()" class="w-full py-2.5 px-4 bg-white border border-sky-200 dark:bg-rose-900/20 text-sky-600 font-semibold rounded-xl hover:border border-rose-600 hover:bg-rose-100 dark:hover:bg-rose-900/40 hover:text-rose-500 transition-colors">Sign Out</button>
+                </div>
+
+                <div class="w-full md:w-2/3 p-8">
+                    <form id="profileForm" class="space-y-8">
+                        
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-sky-200/50 pb-2">Profile Information</h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-sky-600 uppercase tracking-widest mb-1.5 ml-1">Store Name</label>
+                                    <div id="viewShopName" class="px-4 py-2 text-slate-800 dark:text-slate-200 font-medium text-lg"></div>
+                                    <input type="text" id="profShopName" class="hidden w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-600 text-sm focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all shadow-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-sky-600 uppercase tracking-widest mb-1.5 ml-1">Owner Name</label>
+                                    <div id="viewOwnerName" class="px-4 py-2 text-slate-800 dark:text-slate-200 font-medium text-lg"></div>
+                                    <input type="text" id="profOwnerName" class="hidden w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-600 text-sm focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all shadow-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-sky-600 uppercase tracking-widest mb-1.5 ml-1">Category</label>
+                                    <div id="viewCategory" class="px-4 py-2 text-slate-800 dark:text-slate-200 font-medium text-lg"></div>
+                                    <select id="profCategory" class="hidden w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-600 text-sm focus:ring-2 focus:ring-sky-400 outline-none transition-all shadow-sm cursor-pointer">
+                                        <option value="Electronics">Electronics</option>
+                                        <option value="Grocery">Grocery / Supermarket</option>
+                                        <option value="Fashion">Clothing & Fashion</option>
+                                        <option value="Hardware">Hardware & Tools</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-sky-600 uppercase tracking-widest mb-1.5 ml-1">Business Type</label>
+                                    <div id="viewType" class="px-4 py-2 text-slate-800 dark:text-slate-200 font-medium text-lg"></div>
+                                    <select id="profType" class="hidden w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-600 text-sm focus:ring-2 focus:ring-sky-400 outline-none transition-all shadow-sm cursor-pointer">
+                                        <option value="Retail">Retail</option>
+                                        <option value="Wholesale">Wholesale</option>
+                                        <option value="Both">Both (Retail & Wholesale)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-sky-200/50 pb-2">Contact Info</h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-sky-600 uppercase tracking-widest mb-1.5 ml-1">WhatsApp / Phone</label>
+                                    <div id="viewPhone" class="px-4 py-2 text-slate-800 dark:text-slate-200 font-medium text-lg"></div>
+                                    <input type="text" id="profPhone" class="hidden w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-600 text-sm focus:ring-2 focus:ring-sky-400 outline-none transition-all shadow-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-sky-600 uppercase tracking-widest mb-1.5 ml-1">Region / Address</label>
+                                    <div id="viewAddress" class="px-4 py-2 text-slate-800 dark:text-slate-200 font-medium text-lg"></div>
+                                    <input type="text" id="profAddress" class="hidden w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-600 text-sm focus:ring-2 focus:ring-sky-400 outline-none transition-all shadow-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-sky-200/50 pb-2">About the Store</h4>
+                            <div>
+                                <div id="viewBio" class="px-4 py-2 text-slate-600 dark:text-slate-300 leading-relaxed"></div>
+                                <textarea id="profBio" class="hidden w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-600 text-sm focus:ring-2 focus:ring-sky-400 outline-none transition-all shadow-sm min-h-[100px] resize-y" placeholder="Brief description of your business..."></textarea>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+            <div class="px-8 py-5 border-t border-sky-200/50 dark:border-slate-700/50 bg-white/40 dark:bg-slate-900/40 flex justify-end items-center gap-3">
+                <button id="profEditBtn" class="px-8 py-3 bg-sky-500 hover:bg-sky-600 text-white text-sm font-bold rounded-xl shadow-md shadow-sky-500/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all" onclick="enableProfileEdit()">Edit Profile</button>
+                
+                <button id="profCancelBtn" class="hidden px-6 py-3 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-sm font-bold transition-all" onclick="cancelProfileEdit()">Cancel Edit</button>
+                <button id="profSaveBtn" class="hidden px-8 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white text-sm font-bold rounded-xl shadow-md shadow-blue-500/30 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all" onclick="saveProfile()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+   <div id="authOverlay" class="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md z-[100] opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center p-4 sm:p-6">
+        
+        <div id="authModal" class="relative w-full max-w-5xl h-auto max-h-[95vh] min-h-[600px] bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-white/50 dark:border-brand-500/20 shadow-[0_20px_60px_rgba(0,0,0,0.2)] dark:shadow-[0_0_40px_rgba(16,185,129,0.1)] rounded-[2rem] flex transform scale-95 opacity-0 transition-all duration-300 ease-out overflow-hidden">
+            
+            <button onclick="closeAuthModal()" class="absolute top-6 right-6 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-slate-100/80 dark:bg-slate-800/80 text-slate-500 hover:bg-rose-100 dark:hover:bg-rose-900/40 hover:text-rose-600 dark:hover:text-rose-400 hover:rotate-90 hover:scale-110 active:scale-90 transition-all duration-300 shadow-sm">✕</button>
+
+            <div class="hidden md:flex w-5/12 bg-gradient-to-br from-slate-900 via-brand-900 to-slate-900 p-10 flex-col justify-between relative overflow-hidden border-r border-white/10 dark:border-brand-500/20">
+                
+                <svg class="absolute inset-0 w-full h-full opacity-50" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#34d399" />
+                            <stop offset="100%" stop-color="#14b8a6" />
+                        </linearGradient>
+                        <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#10b981" />
+                            <stop offset="100%" stop-color="#0f766e" />
+                        </linearGradient>
+                        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feGaussianBlur stdDeviation="2" result="blur" />
+                            <feMerge>
+                                <feMergeNode in="blur" />
+                                <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                        </filter>
+                    </defs>
+                    <path d="M0,80 Q20,20 40,50 T100,30" fill="none" stroke="url(#grad1)" stroke-width="0.8" filter="url(#glow)" class="animate-pulse" style="animation-duration: 3s;" />
+                    <path d="M0,60 Q30,90 60,40 T100,70" fill="none" stroke="url(#grad2)" stroke-width="0.5" filter="url(#glow)" class="animate-pulse" style="animation-duration: 4s; animation-delay: 1s;" />
+                    <circle cx="40" cy="50" r="1.5" fill="#34d399" filter="url(#glow)" class="animate-pulse" />
+                    <circle cx="60" cy="40" r="2" fill="#14b8a6" filter="url(#glow)" class="animate-pulse" style="animation-delay: 1s;" />
+                </svg>
+
+                <div class="relative z-10 hover:scale-105 transition-transform duration-500">
+                    <div class="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 text-white text-3xl mb-4 shadow-[0_0_20px_rgba(16,185,129,0.3)]">📦</div>
+                    <h2 class="text-3xl font-bold text-white tracking-tight">Stocx.</h2>
+                </div>
+
+                <div class="relative z-10 mt-auto">
+                    <h3 class="text-2xl font-bold text-white mb-3">Inventory Mastered.</h3>
+                    <p class="text-brand-100 text-sm leading-relaxed opacity-80">Streamline your operations, track stock in real-time, and manage your billing from one unified platform.</p>
+                </div>
+            </div>
+
+            <div class="w-full md:w-7/12 relative bg-transparent overflow-y-auto scroll-smooth no-scrollbar">
+                <div class="p-8 sm:p-12 min-h-full flex flex-col justify-center">
+
+                    <div id="authLoginView" class="transition-opacity duration-300 w-full max-w-md mx-auto py-4">
+                        <h2 class="text-3xl font-extrabold text-slate-800 dark:text-white mb-2">Log in</h2>
+                        <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-8">Don't have an account? <span class="text-brand-600 dark:text-brand-400 cursor-pointer hover:text-brand-500 transition-colors font-bold" onclick="switchAuthView('authRegPhase1')">Create an Account</span></p>
+                        
+                        <div class="space-y-5">
+                            <div class="group">
+                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 transition-colors group-focus-within:text-brand-500">Shop Name</label>
+                                <input type="text" id="loginShop" class="w-full px-4 py-3 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm hover:border-brand-400 focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:shadow-[0_0_15px_rgba(16,185,129,0.15)] outline-none transition-all duration-300" placeholder="My Store">
+                            </div>
+                            <div class="group">
+                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 transition-colors group-focus-within:text-brand-500">Email Address</label>
+                                <input type="email" id="loginEmail" class="w-full px-4 py-3 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm hover:border-brand-400 focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:shadow-[0_0_15px_rgba(16,185,129,0.15)] outline-none transition-all duration-300" placeholder="you@example.com">
+                            </div>
+                            <div class="group">
+                                <div class="flex justify-between mb-2">
+                                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors group-focus-within:text-brand-500">Password</label>
+                                    <span class="text-[10px] font-bold text-brand-600 cursor-pointer hover:text-brand-500 transition-colors">Forgot Password?</span>
+                                </div>
+                                <input type="password" id="loginPassword" class="w-full px-4 py-3 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm hover:border-brand-400 focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:shadow-[0_0_15px_rgba(16,185,129,0.15)] outline-none transition-all duration-300" placeholder="••••••••">
+                            </div>
+                        </div>
+                        
+                        <div id="loginError" class="h-6 text-rose-500 text-xs font-bold mt-2"></div>
+                        
+                        <button id="loginBtn" class="w-full py-3.5 bg-gradient-to-r from-brand-500 to-accent-500 text-white font-bold rounded-xl shadow-md shadow-brand-500/20 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:-translate-y-0.5 active:scale-95 transition-all duration-300 mt-2 mb-6">Log in</button>
+                        
+                        <div class="relative flex items-center py-2 mb-6">
+                            <div class="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+                            <span class="flex-shrink-0 mx-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Or continue with</span>
+                            <div class="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+                        </div>
+
+                        <div class="flex gap-4">
+                            <button type="button" id="googleLoginBtn" class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-semibold text-xs text-slate-600 dark:text-slate-300 hover:border-brand-400 hover:text-brand-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)] active:scale-95 transition-all duration-300">
+                                <img src="https://img.icons8.com/color/20/000000/google-logo.png" alt="Google"> Google
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="authRegPhase1" class="hidden transition-opacity duration-300 w-full max-w-md mx-auto py-4">
+                        <button onclick="switchAuthView('authLoginView')" class="group flex items-center gap-2 text-slate-400 hover:text-brand-500 mb-6 transition-colors font-medium text-sm">
+                            <span class="transform group-hover:-translate-x-1 transition-transform">←</span> Back to Login
+                        </button>
+                        <h2 class="text-3xl font-extrabold text-slate-800 dark:text-white mb-6">Create Account</h2>
+                        
+                        <div class="space-y-5">
+                            
+                            <div class="group">
+                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 group-focus-within:text-brand-500 transition-colors">Email Address</label>
+                                <div class="relative flex items-center">
+                                    <input type="email" id="regEmail" class="w-full pl-4 pr-[120px] py-3 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm hover:border-brand-400 focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:shadow-[0_0_15px_rgba(16,185,129,0.15)] outline-none transition-all duration-300" placeholder="you@example.com">
+                                    <div class="absolute right-1.5 flex items-center h-full">
+                                        <button id="sendOtpBtn" type="button" class="h-[80%] px-3 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 font-bold rounded-lg border border-transparent hover:border-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-all text-[11px] active:scale-95 shadow-sm uppercase tracking-wide">
+                                            Get Code
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="otpGroup" class="group hidden transition-all duration-500 transform opacity-0 translate-y-[-10px]">
+                                <div class="flex justify-between items-end mb-2">
+                                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors group-focus-within:text-brand-500">6-Digit Passcode</label>
+                                    <span id="otpTimerText" class="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">01:00</span>
+                                    <button id="resendOtpBtn" type="button" class="hidden text-[10px] font-bold text-brand-600 hover:text-brand-500 transition-colors underline underline-offset-2">Resend Code</button>
+                                </div>
+                                <input type="text" id="regOtp" maxlength="6" placeholder="• • • • • •" class="w-full px-4 py-3 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-center text-2xl tracking-[0.5em] font-mono text-brand-600 dark:text-brand-400 placeholder:text-slate-300 dark:placeholder:text-slate-600 hover:border-brand-400 focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:shadow-[0_0_15px_rgba(16,185,129,0.15)] outline-none transition-all duration-300">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="group">
+                                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 group-focus-within:text-brand-500 transition-colors">Password</label>
+                                    <input type="password" id="regPassword" class="w-full px-4 py-3 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm hover:border-brand-400 focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:shadow-[0_0_15px_rgba(16,185,129,0.15)] outline-none transition-all duration-300" placeholder="••••••••">
+                                </div>
+                                <div class="group">
+                                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 group-focus-within:text-brand-500 transition-colors">Confirm Password</label>
+                                    <input type="password" id="regConfirm" class="w-full px-4 py-3 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm hover:border-brand-400 focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:shadow-[0_0_15px_rgba(16,185,129,0.15)] outline-none transition-all duration-300" placeholder="••••••••">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="regError1" class="h-6 text-rose-500 text-xs font-bold mt-4 transition-colors text-center"></div>
+                        
+                        <button id="nextPhaseBtn" class="w-full py-3.5 bg-brand-500 text-white font-bold rounded-xl shadow-md hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:-translate-y-0.5 active:scale-95 transition-all duration-300 mt-2">Next: Business Details →</button>
+                    </div>
+                    <div id="authRegPhase2" class="hidden transition-opacity duration-300 w-full max-w-md mx-auto py-4">
+                        <button onclick="switchAuthView('authRegPhase1')" class="group flex items-center gap-2 text-slate-400 hover:text-brand-500 mb-4 transition-colors font-medium text-sm">
+                            <span class="transform group-hover:-translate-x-1 transition-transform">←</span> Back to Account Details
+                        </button>
+                        <h2 class="text-3xl font-extrabold text-slate-800 dark:text-white mb-6">Business Profile</h2>
+                        
+                        <div class="space-y-4">
+                            <div class="group">
+                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 group-focus-within:text-brand-500 transition-colors">Store Name</label>
+                                <input type="text" id="regShopName" class="w-full px-4 py-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm hover:border-brand-400 focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:shadow-[0_0_10px_rgba(16,185,129,0.1)] outline-none transition-all">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="group">
+                                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 group-focus-within:text-brand-500 transition-colors">Owner Name</label>
+                                    <input type="text" id="regOwner" class="w-full px-4 py-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm hover:border-brand-400 focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:shadow-[0_0_10px_rgba(16,185,129,0.1)] outline-none transition-all">
+                                </div>
+                                <div class="group">
+                                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 group-focus-within:text-brand-500 transition-colors">Phone</label>
+                                    <input type="text" id="regContact" class="w-full px-4 py-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm hover:border-brand-400 focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:shadow-[0_0_10px_rgba(16,185,129,0.1)] outline-none transition-all">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="group">
+                                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 group-focus-within:text-brand-500 transition-colors">Type</label>
+                                    <select id="regShopType" class="w-full px-4 py-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm hover:border-brand-400 focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:shadow-[0_0_10px_rgba(16,185,129,0.1)] outline-none transition-all cursor-pointer">
+                                        <option value="retail">Retail</option>
+                                        <option value="wholesale">Wholesale</option>
+                                    </select>
+                                </div>
+                                <div class="group">
+                                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 group-focus-within:text-brand-500 transition-colors">Category</label>
+                                    <input type="text" id="regCategory" class="w-full px-4 py-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm hover:border-brand-400 focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:shadow-[0_0_10px_rgba(16,185,129,0.1)] outline-none transition-all" placeholder="e.g. Grocery">
+                                </div>
+                            </div>
+                            <div class="group">
+                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 group-focus-within:text-brand-500 transition-colors">Address</label>
+                                <textarea id="regAddress" class="w-full px-4 py-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm hover:border-brand-400 focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:shadow-[0_0_10px_rgba(16,185,129,0.1)] outline-none transition-all resize-y min-h-[60px]"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div id="regError2" class="h-6 text-rose-500 text-xs font-bold mt-2"></div>
+                        
+                        <button id="submitRegBtn" class="w-full py-3.5 bg-gradient-to-r from-brand-500 to-accent-500 text-white font-bold rounded-xl shadow-md hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:-translate-y-0.5 active:scale-95 transition-all duration-300 mt-2">Complete Setup ✓</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Theme Toggle & 'D' Hotkey ---
+        const themeToggleBtn = document.getElementById('themeToggle');
+        const spotlight = document.getElementById('spotlight');
+        
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+                spotlight.classList.remove('opacity-0');
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+                spotlight.classList.add('opacity-0');
+            }
+        }
+
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            setTheme('dark');
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.contains('dark');
+            setTheme(isDark ? 'light' : 'dark');
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.defaultPrevented || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+            if (e.key.toLowerCase() !== 'd') return;
+            const target = e.target;
+            if (target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
+            const isDark = document.documentElement.classList.contains('dark');
+            setTheme(isDark ? 'light' : 'dark');
+        });
+
+        // --- 2. Dark Mode Spotlight Effect ---
+        window.addEventListener('mousemove', (e) => {
+            if (document.documentElement.classList.contains('dark')) {
+                const x = e.clientX;
+                const y = e.clientY;
+                spotlight.style.background = `radial-gradient(600px circle at ${x}px ${y}px, rgba(16, 185, 129, 0.08), transparent 40%)`;
+            }
+        }, { passive: true });
+
+        // --- 3. GET LOGO SECURELY USING DATA ATTRIBUTES ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const isLoggedIn = document.body.getAttribute('data-logged-in') === 'true';
+            
+            if (isLoggedIn) {
+                fetch('/api/profile/')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.logo_url) {
+                            const navLogo = document.getElementById('navLogo');
+                            if (navLogo) navLogo.src = data.logo_url;
+                        }
+                    }).catch(e => console.error("Failed to fetch profile logo:", e));
+            }
+        });
+
+        // --- 4. Falling "Rain" Icons ---
+        function createRain() {
+            const container = document.getElementById('rain-container');
+            const icons = ['📦', '🧾', '👥', '📂', '🛒', '📊'];
+            
+            setInterval(() => {
+                const icon = document.createElement('div');
+                icon.className = 'rain-icon text-xl sm:text-2xl opacity-20 dark:opacity-10';
+                icon.innerText = icons[Math.floor(Math.random() * icons.length)];
+                icon.style.left = Math.random() * 100 + 'vw';
+                icon.style.animationDuration = (Math.random() * 8 + 10) + 's'; 
+                container.appendChild(icon);
+                
+                setTimeout(() => icon.remove(), 18000); 
+            }, 1000); 
+        }
+        createRain();
+
+        // --- 5. Profile Drawer Methods ---
+        function openProfileDrawer() {
+            document.getElementById('profileOverlay').classList.replace('opacity-0', 'opacity-100');
+            document.getElementById('profileOverlay').classList.replace('pointer-events-none', 'pointer-events-auto');
+            document.getElementById('profileModal').classList.replace('scale-95', 'scale-100');
+            document.getElementById('profileModal').classList.replace('opacity-0', 'opacity-100');
+            if(typeof fetchProfileData === 'function') fetchProfileData();
+        }
+
+        function closeProfileDrawer() {
+            document.getElementById('profileOverlay').classList.replace('opacity-100', 'opacity-0');
+            document.getElementById('profileOverlay').classList.replace('pointer-events-auto', 'pointer-events-none');
+            document.getElementById('profileModal').classList.replace('scale-100', 'scale-95');
+            document.getElementById('profileModal').classList.replace('opacity-100', 'opacity-0');
+            if(typeof cancelProfileEdit === 'function') setTimeout(cancelProfileEdit, 300);
+        }
+
+        // ==========================================
+        // KEYBOARD ACCESSIBILITY (ENTER KEY)
+        // ==========================================
+        
+        function setupEnterNavigation(inputIds, submitBtnId) {
+            inputIds.forEach((inputId, index) => {
+                const el = document.getElementById(inputId);
+                if (!el) return;
+                
+                el.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault(); 
+                        
+                        if (index < inputIds.length - 1) {
+                            document.getElementById(inputIds[index + 1]).focus();
+                        } else {
+                            document.getElementById(submitBtnId).click();
+                        }
+                    }
+                });
+            });
+        }
+
+        setupEnterNavigation(['loginShop', 'loginEmail', 'loginPassword'], 'loginBtn');
+        setupEnterNavigation(['regEmail', 'regPassword', 'regConfirm'], 'nextPhaseBtn');
+        setupEnterNavigation(['regShopName', 'regOwner', 'regContact', 'regShopType', 'regCategory', 'regAddress'], 'submitRegBtn');
+        
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="static/js/dashboard.js"></script>
+</body>
+</html>

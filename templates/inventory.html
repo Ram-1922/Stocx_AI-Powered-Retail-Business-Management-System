@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stocx - Smart Inventory</title>
+    <link rel="icon" href="/static/icons/verify_3199586.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#ecfdf5', 100: '#d1fae5', 400: '#34d399', 500: '#10b981', 600: '#059669', 900: '#064e3b' },
+                        accent: { 500: '#14b8a6', 600: '#0d9488' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; overflow-x: hidden; transition: background-color 0.3s, color 0.3s; }
+        
+        /* Custom Scrollbar for the Table */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* Glassmorphism */
+        .glass-card {
+            background: var(--bg-glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+        }
+        
+        :root {
+            --bg-base: #f8fafc;
+            --bg-glass: rgba(255, 255, 255, 0.75);
+            --border-glass: rgba(16, 185, 129, 0.2);
+        }
+        .dark {
+            --bg-base: #020617;
+            --bg-glass: rgba(15, 23, 42, 0.75);
+            --border-glass: rgba(16, 185, 129, 0.15);
+        }
+
+        /* Radial Backgrounds */
+        .radial-bg {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -10;
+            background: radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.08), transparent 40%),
+                        radial-gradient(circle at 85% 30%, rgba(20, 184, 166, 0.08), transparent 40%);
+        }
+
+        /* Rain Animation */
+        @keyframes rainFall {
+            0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.15; }
+            90% { opacity: 0.15; }
+            100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+        }
+        .rain-icon { position: fixed; top: -50px; z-index: -5; animation: rainFall linear forwards; pointer-events: none; user-select: none; filter: grayscale(100%); }
+
+        /* Table Styles */
+        th { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); }
+        button, p, a, nav, h1, h2, h3, label, .btn-action, .close-btn {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        /* Ensure users can still select and copy text inside inputs and tables (like Invoice IDs) */
+        input, textarea, select, td {
+            -webkit-user-select: auto;
+            -moz-user-select: auto;
+            -ms-user-select: auto;
+            user-select: auto;
+        }
+    </style>
+</head>
+<body class="bg-[var(--bg-base)] text-slate-800 dark:text-slate-100 antialiased min-h-screen flex flex-col selection:bg-brand-500 selection:text-white">
+
+    <div class="radial-bg"></div>
+    <div id="rain-container"></div>
+    <div class="fixed top-[-10%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-brand-400/20 dark:bg-brand-900/20 blur-[120px] pointer-events-none -z-10"></div>
+    <div class="fixed bottom-[-10%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-accent-400/15 dark:bg-accent-900/20 blur-[120px] pointer-events-none -z-10"></div>
+
+    <nav class="sticky top-0 z-40 w-full glass-card border-b transition-all duration-300 shadow-sm">
+        <div class="max-w-[1600px] mx-auto px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex items-center gap-6">
+                    <a href="/" class="group flex items-center gap-2 px-4 py-2 bg-slate-100/50 dark:bg-slate-800/50 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-900/30 border border-slate-200 dark:border-slate-700 hover:border-brand-300 transition-all">
+                        <span class="text-brand-500 group-hover:-translate-x-1 transition-transform"><--</span>
+                        <span class="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-brand-600 dark:group-hover:text-brand-400">Dashboard</span>
+                    </a>
+                    <div class="h-6 w-px bg-slate-300 dark:bg-slate-700"></div>
+                    <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-accent-500 flex items-center gap-3">
+                        <span class="text-2xl">📦</span> Inventory Management
+                    </h1>
+                </div>
+                
+                <button id="themeToggle" class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 hover:text-brand-500 border border-slate-200 dark:border-slate-700 transition-all hover:scale-105" title="Press 'D' to toggle">
+                    <svg class="w-5 h-5 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                    <svg class="w-5 h-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow max-w-[1700px] mx-auto px-6 lg:px-8 py-10 w-full relative z-10 flex flex-col gap-8">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="lg:col-span-2 glass-card rounded-[2rem] p-8 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-brand-400/10 rounded-bl-full -z-10 group-hover:scale-150 transition-transform duration-700"></div>
+                <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2"><span class="text-brand-500">✨</span> AI Invoice Scanner</h3>
+                
+                <form id="uploadForm" class="relative">
+                    <div id="dropZone" class="relative w-full border-2 border-dashed border-brand-400/50 hover:border-brand-500 bg-brand-50/50 dark:bg-slate-800/50 rounded-2xl p-2 text-center transition-all duration-300 group/drop cursor-pointer overflow-hidden min-h-[240px] flex items-center justify-center">
+                        <input type="file" id="invoiceFile" accept="image/*" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30">
+                        <div id="dropZoneDefault" class="flex flex-col items-center justify-center gap-3 relative z-20 transition-opacity duration-300 pointer-events-none p-8">
+                            <div class="w-16 h-16 rounded-full bg-white dark:bg-slate-700 shadow-md flex items-center justify-center text-3xl group-hover/drop:scale-110 group-hover/drop:-translate-y-2 group-hover/drop:shadow-brand-500/30 transition-all duration-300"><img class="w-10 h-10" src="static/icons/camera.png"/></div>
+                            <p class="text-slate-600 dark:text-slate-300 font-medium text-lg">Drag & drop your invoice here</p>
+                            <p class="text-slate-400 dark:text-slate-500 text-sm">or click to browse from your device</p>
+                        </div>
+                        <div id="dropZonePreview" class="absolute inset-0 z-10 hidden bg-slate-100/50 dark:bg-slate-900/50 backdrop-blur-sm p-3 transition-opacity duration-300 opacity-0">
+                            <img id="previewImg" src="" alt="Preview" class="w-full h-full object-contain rounded-xl shadow-sm border border-slate-200/50 dark:border-slate-700/50 bg-white dark:bg-slate-800">
+                            <div class="absolute inset-3 rounded-xl bg-black/60 flex items-center justify-center opacity-0 group-hover/drop:opacity-100 transition-opacity duration-300 z-20">
+                                <span class="text-white font-bold px-5 py-2.5 bg-white/20 rounded-xl backdrop-blur-md flex items-center gap-2 border border-white/30 shadow-lg">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                    Change Image
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center justify-between">
+                        <div id="uploadStatus" class="text-sm font-semibold text-slate-500 dark:text-slate-400 px-2 truncate max-w-[60%]"></div>
+                        <button type="submit" id="uploadBtn" class="px-8 py-3 bg-gradient-to-r from-brand-500 to-accent-500 text-white font-bold rounded-xl shadow-md hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:-translate-y-0.5 active:scale-95 transition-all">Scan & Sync</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="glass-card rounded-[2rem] p-8 flex flex-col justify-center relative overflow-hidden group">
+                <div class="absolute bottom-0 right-0 w-32 h-32 bg-accent-400/10 rounded-tl-full -z-10 group-hover:scale-150 transition-transform duration-700"></div>
+                <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">Total Inventory Value</h3>
+                <h2 id="totalValueStat" class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-accent-600 mb-4 tracking-tight">₹0.00</h2>
+                
+                <div class="bg-white/50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-700/50 rounded-xl p-4 flex items-center justify-between">
+                    <span class="text-sm font-semibold text-slate-500 dark:text-slate-400">Total Unique Items</span>
+                    <span id="totalItemsStat" class="text-xl font-bold text-slate-800 dark:text-white bg-slate-200/50 dark:bg-slate-700/50 px-3 py-1 rounded-lg">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-card rounded-[2rem] flex flex-col flex-grow overflow-hidden shadow-lg mb-8">
+            
+            <div class="p-6 border-b border-slate-200/50 dark:border-slate-700/50 bg-white/30 dark:bg-slate-800/30 flex flex-col xl:flex-row justify-between items-center gap-4">
+                
+                <div class="flex items-center gap-2 p-1.5 bg-slate-200/50 dark:bg-slate-900/50 rounded-2xl w-full sm:w-max border border-slate-300/50 dark:border-slate-700/50 overflow-x-auto no-scrollbar">
+                    <button class="inv-tab-btn px-5 py-2.5 rounded-xl text-sm font-bold transition-all bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-500 shadow-sm border border-transparent whitespace-nowrap" data-tab="all">All Stock</button>
+                    <button class="inv-tab-btn px-5 py-2.5 rounded-xl text-sm font-bold transition-all bg-transparent text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent whitespace-nowrap" data-tab="zero">Zero Stock</button>
+                    <button class="inv-tab-btn px-5 py-2.5 rounded-xl text-sm font-bold transition-all bg-transparent text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent whitespace-nowrap" data-tab="expired">Expired Items</button>
+                    <button class="inv-tab-btn px-5 py-2.5 rounded-xl text-sm font-bold transition-all bg-transparent text-slate-500 hover:bg-white/50 dark:hover:bg-slate-800/50 border border-transparent whitespace-nowrap" data-tab="returned">Returned</button>
+                </div>
+                
+                <div class="flex flex-wrap items-center justify-end gap-3 w-full xl:w-auto">
+                    <div class="relative group">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><img class="w-5 h-5" src="static/icons/magnifying-glass.png"/></span>
+                        <input type="text" id="searchInput" placeholder="Search products..." class="pl-10 pr-4 py-2.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 outline-none transition-all w-full sm:w-64 shadow-sm group-hover:border-brand-300">
+                    </div>
+                    
+                    <div class="relative group flex items-center">
+                        <div class="absolute left-3 flex items-center justify-center pointer-events-none text-brand-500">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path></svg>
+                        </div>
+                        <select id="inventorySort" class="pl-9 pr-10 py-2.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 outline-none transition-all shadow-sm cursor-pointer hover:border-brand-300 appearance-none min-w-[160px]">
+                            <option value="name-asc">Name (A - Z)</option>
+                            <option value="name-desc">Name (Z - A)</option>
+                            <option value="qty-desc">Highest Stock</option>
+                            <option value="qty-asc">Lowest Stock</option>
+                            <option value="expiry-asc">Expiry (Nearest)</option>
+                            <option value="expiry-desc">Expiry (Furthest)</option>
+                            <option value="date-desc">Recently Updated</option>
+                        </select>
+                        <div class="absolute right-3 pointer-events-none text-slate-400 group-hover:text-brand-500 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
+                    
+                    <button id="manualAddBtn" class="px-6 py-2.5 bg-gradient-to-r from-brand-500 to-accent-500 text-white text-sm font-bold rounded-xl shadow-md shadow-brand-500/30 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:-translate-y-0.5 active:scale-95 transition-all flex items-center gap-2">
+                        <span><img class="w-4 h-4" src="static/icons/add.png"/></span> Add Product
+                    </button>
+                    
+                    <button id="clearInventoryBtn" class="px-5 py-2.5 bg-rose-50 dark:bg-rose-500/10 text-rose-600 border border-rose-200 dark:border-rose-500/30 text-sm font-bold rounded-xl hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-all active:scale-95"> Clear All</button>
+                </div>
+            </div>
+
+            <div class="px-4 pb-6 overflow-x-auto max-h-[600px] mt-2 relative">
+               <table id="inventoryTable" class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead class="sticky top-0 z-20 bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-700">
+                        <tr class="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                            <th class="px-6 py-5">Product Name</th>
+                            <th class="px-6 py-5">Agency</th>
+                            <th class="px-6 py-5 text-center">Stock Qty</th>
+                            <th class="px-6 py-5 text-right">Unit Cost</th>
+                            <th class="px-6 py-5 text-right">Net Amount</th>
+                            <th class="px-6 py-5 text-right">MRP</th>
+                            <th class="px-6 py-5 text-center">Expiry</th>
+                            <th class="px-6 py-5 text-center">Actions</th>
+                            <th class="px-6 py-5 text-right">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventoryBody" class="divide-y divide-slate-100 dark:divide-slate-800/60 text-sm font-medium text-slate-700 dark:text-slate-300">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="historyModal" class="hidden fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-[160] flex items-center justify-center p-4 transition-opacity">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden transform scale-95 transition-transform duration-300">
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                <h2 id="modalProductName" class="text-xl font-bold text-slate-800 dark:text-white">Product History</h2>
+                <button class="close-btn w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center hover:bg-rose-100 hover:text-rose-500 transition-colors">✕</button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[60vh]">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="text-slate-500 dark:text-slate-400 uppercase tracking-wider text-xs border-b border-slate-200 dark:border-slate-700">
+                            <th class="pb-3">Date</th>
+                            <th class="pb-3">Qty Added</th>
+                            <th class="pb-3">Cost Price</th>
+                            <th class="pb-3">Expiry</th>
+                            <th class="pb-3">MRP</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modalHistoryBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="reviewModal" class="hidden fixed inset-0 bg-slate-900/80 dark:bg-black/90 backdrop-blur-sm z-[120] flex items-center justify-center p-4 sm:p-6 lg:p-8 transition-opacity">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-[2rem] shadow-2xl w-full max-w-7xl flex flex-col max-h-[90vh] overflow-hidden transform scale-95 transition-transform duration-300">
+            <div class="px-8 py-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-slate-800 dark:text-white flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center text-xl shadow-sm">✨</span>
+                        Review Scanned Invoice
+                    </h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">Verify AI-extracted data. <span class="text-brand-500 font-bold">Add missing expiry dates</span> below.</p>
+                </div>
+                <button class="close-review-btn w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-rose-100 hover:text-rose-500 transition-all hover:rotate-90 active:scale-90 shadow-sm">✕</button>
+            </div>
+
+            <div class="flex-grow overflow-y-auto max-h-[60vh] bg-slate-50/50 dark:bg-slate-900/50 p-6 relative no-scrollbar">
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-emerald-200 dark:border-emerald-800/50 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="sticky top-0 z-30 bg-emerald-50 dark:bg-emerald-900/20 shadow-sm border-b border-emerald-200 dark:border-emerald-800">
+                            <tr class="text-emerald-700 dark:text-emerald-400 uppercase tracking-wider text-[11px] font-extrabold divide-x divide-emerald-200/50 dark:divide-emerald-800/50">
+                                <th class="px-4 py-4 text-center w-16">#</th>
+                                <th class="px-5 py-4">Product Name</th>
+                                <th class="px-4 py-4 text-center w-24">Qty</th>
+                                <th class="px-4 py-4 text-right w-32">Unit Price</th>
+                                <th class="px-4 py-4 text-right w-32">Net Amt</th>
+                                <th class="px-4 py-4 text-right w-28">MRP</th>
+                                <th class="px-4 py-4 text-center w-32">Expiry <span class="text-rose-500">*</span></th>
+                                <th class="px-4 py-4 text-center w-16">Del</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reviewTableBody" class="divide-y divide-slate-100 dark:divide-slate-700/50"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="px-8 py-5 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-6 w-full sm:w-auto">
+                    <button id="reviewRescanBtn" class="flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 shadow-sm text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        Rescan
+                    </button>
+                    <label class="relative inline-flex items-center cursor-pointer group">
+                        <input type="checkbox" id="addToCreditCheck" class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+                        <span class="ml-3 text-sm font-bold text-slate-500 dark:text-slate-400 group-hover:text-brand-500 transition-colors">Send to Credits Queue</span>
+                    </label>
+                </div>
+                <div class="flex items-center gap-6 w-full sm:w-auto justify-end">
+                    <div class="flex flex-col items-end text-right pr-6 border-r border-slate-200 dark:border-slate-700">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Invoice Value</span>
+                        <span class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-brand-500" id="reviewTotalDisplay">₹0.00</span>
+                    </div>
+                    <button id="saveInventoryBtn" class="px-8 py-3.5 bg-brand-500 text-white font-bold rounded-xl shadow-md hover:bg-brand-600 hover:-translate-y-0.5 active:scale-95 transition-all flex items-center gap-2">
+                        <span>Confirm & Save</span>
+                        <span class="text-xl leading-none">→</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="actionModal" class="hidden fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-[150] flex items-center justify-center p-4 transition-opacity">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl w-full max-w-sm p-8 text-center transform scale-95 transition-transform duration-300">
+            <h2 id="actionModalTitle" class="text-2xl font-bold text-slate-800 dark:text-white mb-2">Action</h2>
+            <p id="actionModalDesc" class="text-sm text-slate-500 dark:text-slate-400 mb-6"></p>
+            <input type="text" id="actionModalInput" class="hidden w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-brand-500/40 outline-none transition-all mb-4">
+            <input type="text" id="actionModalInput2" placeholder="Expiry Date (DD/MM/YY)" class="hidden w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-brand-500/40 outline-none transition-all mb-6">
+            <div class="flex gap-3">
+                <button id="actionModalCancelBtn" class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95">Cancel</button>
+                <button id="actionModalConfirmBtn" class="flex-1 py-3 bg-brand-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="scanningOverlay" class="hidden fixed inset-0 bg-slate-900/50 dark:bg-black/60 backdrop-blur-md z-[150] flex flex-col items-center justify-center transition-opacity duration-300 opacity-0">
+        <div class="absolute w-80 h-80 bg-brand-500/20 rounded-full blur-[100px] animate-pulse"></div>
+        <img src="/static/icons/packingloop.gif" alt="AI is Scanning" class="relative z-10 w-64 h-64 object-contain mb-8 drop-shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+        <div class="relative z-10 flex flex-col items-center text-center">
+            <h3 class="text-3xl font-extrabold text-white mb-3 tracking-tight">Stocx AI Engine</h3>
+            <div class="flex items-center gap-3 bg-white/10 border border-white/20 px-6 py-3 rounded-full backdrop-blur-md shadow-lg">
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-brand-500"></span>
+                </span>
+                <p id="scanningText" class="text-brand-300 font-bold tracking-wide">Initializing secure scan...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. Cache elements
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('invoiceFile');
+        const defaultZone = document.getElementById('dropZoneDefault');
+        const previewZone = document.getElementById('dropZonePreview');
+        const previewImg = document.getElementById('previewImg');
+        const uploadStatus = document.getElementById('uploadStatus');
+
+        // 2. FILE PREVIEW LOGIC (Runs on input change or successful drop)
+        fileInput.addEventListener('change', (e) => {
+            if(e.target.files.length > 0) {
+                const file = e.target.files[0];
+                uploadStatus.innerHTML = `<span class="text-brand-600 dark:text-brand-400">File attached:</span> ${file.name}`;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    defaultZone.classList.add('opacity-0');
+                    
+                    setTimeout(() => {
+                        defaultZone.classList.add('hidden');
+                        previewZone.classList.remove('hidden');
+                        setTimeout(() => previewZone.classList.remove('opacity-0'), 10);
+                    }, 300);
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 3. DRAG & DROP LOGIC
+        // Prevent default browser behavior for ALL drag events
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+
+        // Add visual hover effects
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.add('border-brand-500', 'bg-brand-100/50', 'dark:bg-brand-900/30', 'scale-[1.01]');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.remove('border-brand-500', 'bg-brand-100/50', 'dark:bg-brand-900/30', 'scale-[1.01]');
+            });
+        });
+
+        // Catch the drop
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+
+            if (files.length > 0) {
+                // Link the dropped files to the real input
+                fileInput.files = files;
+                // Trigger the 'change' event manually to start the preview logic above
+                fileInput.dispatchEvent(new Event('change'));
+            }
+        });
+
+        // Reset function for Scan & Sync success
+        window.resetDropZone = function() {
+            previewZone.classList.add('opacity-0');
+            setTimeout(() => {
+                previewZone.classList.add('hidden');
+                previewImg.src = '';
+                defaultZone.classList.remove('hidden');
+                setTimeout(() => defaultZone.classList.remove('opacity-0'), 10);
+                uploadStatus.textContent = '';
+                fileInput.value = '';
+            }, 300);
+        }
+
+        // Theme Toggle
+        const themeToggleBtn = document.getElementById('themeToggle');
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            }
+        }
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) setTheme('dark');
+        themeToggleBtn.addEventListener('click', () => setTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark'));
+
+        // Rain Animation
+        function createRain() {
+            const container = document.getElementById('rain-container');
+            const icons = ['📦', '🧾', '🛒', '📋', '🏷️'];
+            setInterval(() => {
+                const icon = document.createElement('div');
+                icon.className = 'rain-icon text-xl opacity-10 dark:opacity-[0.05]';
+                icon.innerText = icons[Math.floor(Math.random() * icons.length)];
+                icon.style.left = Math.random() * 100 + 'vw';
+                icon.style.animationDuration = (Math.random() * 8 + 10) + 's'; 
+                container.appendChild(icon);
+                setTimeout(() => icon.remove(), 18000); 
+            }, 800);
+        }
+        createRain();
+    </script>
+    
+    <script src="/static/js/inventory.js"></script>
+</body>
+</html>

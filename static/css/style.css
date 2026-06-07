@@ -1,0 +1,89 @@
+:root {
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --bg-color: #f8fafc;
+    --card-bg: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --success: #10b981;
+    --danger: #ef4444;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+
+body { background-color: var(--bg-color); color: var(--text-main); }
+
+/* Layout */
+.dashboard-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+.top-nav { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+.brand h1 { font-size: 28px; letter-spacing: -1px; }
+.badge { background: var(--primary); color: white; padding: 4px 10px; border-radius: 20px; font-size: 12px; }
+
+.main-content { display: flex; flex-direction: column; gap: 24px; }
+.control-panel { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+
+/* Cards */
+.card { background: var(--card-bg); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--border); }
+.card h3 { color: var(--text-muted); font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+
+/* Typography & Utils */
+.fw-bold { font-weight: 600; }
+.text-muted { color: var(--text-muted); font-size: 14px; }
+.text-success { color: var(--success); }
+
+/* Buttons & Inputs */
+.btn { padding: 10px 16px; border-radius: 6px; font-weight: 500; cursor: pointer; transition: 0.2s; border: none; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+.btn-outline:hover { background: #f1f5f9; }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+
+.search-bar { padding: 10px 16px; border: 1px solid var(--border); border-radius: 8px; width: 300px; outline: none; transition: 0.2s; }
+.search-bar:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+
+/* Table */
+.table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 16px; text-align: left; border-bottom: 1px solid var(--border); }
+th { color: var(--text-muted); font-weight: 500; font-size: 14px; }
+tr:last-child td { border-bottom: none; }
+tr:hover { background-color: #f8fafc; }
+
+.stock-badge { padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+.healthy-stock { background: #dcfce7; color: #166534; }
+.low-stock { background: #fee2e2; color: #991b1b; }
+
+/* Status Messages */
+.status-msg { margin-top: 12px; font-size: 14px; font-weight: 500; }
+.status-msg.loading { color: var(--primary); }
+.status-msg.success { color: var(--success); }
+.status-msg.error { color: var(--danger); }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 50; }
+.modal-overlay.hidden { display: none; }
+.modal-content { background: var(--card-bg); width: 100%; max-width: 600px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); overflow: hidden; }
+.modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.close-btn { background: none; border: none; font-size: 24px; color: var(--text-muted); cursor: pointer; }
+.close-btn:hover { color: var(--text-main); }
+.modal-body { padding: 0; max-height: 400px; overflow-y: auto; }
+
+.abstract-blob {
+  position: absolute;
+  /* Style it as a blurry colored circle */
+  background: linear-gradient(to right, rgba(16, 185, 129, 0.2), rgba(20, 184, 166, 0.2));
+  border-radius: 50%;
+  filter: blur(40px);
+  /* Continuous floating animation */
+  animation: float-blob 20s infinite ease-in-out alternate;
+}
+
+@keyframes float-blob {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(50px, -50px) scale(1.1); }
+}
+
