@@ -310,21 +310,6 @@ stocx/
 
 ---
 
-# 📸 Screenshots
-
-Add screenshots here:
-
-```text
-Dashboard
-Inventory Module
-POS Billing
-AI Invoice Parser
-Analytics Dashboard
-Customer Ledger
-```
-
----
-
 # 🤝 Contributing
 
 Contributions, feature suggestions, and issue reports are welcome.
