@@ -2,6 +2,20 @@
 
 <div align="center">
 
+---
+
+# 🌐 Live Application
+
+<div align="center">
+
+### Try Stocx Live
+
+[![Launch Stocx](https://img.shields.io/badge/🚀%20Launch%20Stocx-Live%20Application-success?style=for-the-badge)](https://stocx-ai-powered-retail-business-t5p2.onrender.com/)
+
+</div>
+
+---
+
 ### Intelligent Inventory, POS Billing, Financial Tracking & AI Invoice Processing
 
 A modern full-stack retail ERP platform built to help businesses manage inventory, sales, customers, expenses, and financial operations through a unified dashboard powered by AI.
