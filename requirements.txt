@@ -4,5 +4,5 @@ pymongo==4.6.1
 python-dotenv==1.0.0
 google-generativeai==0.4.0
 Werkzeug==3.0.1
-paddleocr>=2.0.1
-paddlepaddle>=3.0.0
+paddleocr==3.0.0
+paddlepaddle==3.0.0
