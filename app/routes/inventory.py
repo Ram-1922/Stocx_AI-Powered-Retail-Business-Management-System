@@ -113,7 +113,7 @@ def save_inventory():
     if invoice_image and invoice_image.filename != '':
         filename = secure_filename(invoice_image.filename)
         unique_filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
-        upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'invoices')
+        upload_dir = os.path.join('static', 'uploads', 'invoices')
         os.makedirs(upload_dir, exist_ok=True)
         invoice_image.save(os.path.join(upload_dir, unique_filename))
         photo_url = f"/static/uploads/invoices/{unique_filename}"
